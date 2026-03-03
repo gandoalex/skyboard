@@ -1,0 +1,37 @@
+# ----------- Stage 1 : Build -----------
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copier les fichiers de dépendances
+COPY package.json package-lock.json* ./
+
+# Installer toutes les dépendances (y compris devDependencies pour le build)
+RUN npm ci
+
+# Copier le reste du code
+COPY . .
+
+# Build de l'application (si applicable, ex: React, Next, Nest, etc.)
+RUN npm run build
+
+
+# ----------- Stage 2 : Production -----------
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copier uniquement les fichiers nécessaires depuis le builder
+COPY package.json package-lock.json* ./
+
+# Installer uniquement les dépendances de production
+RUN npm ci --only=production
+
+# Copier les fichiers buildés
+COPY --from=builder /app/dist ./dist
+
+# Exposer le port
+EXPOSE 3000
+
+# Commande de démarrage
+CMD ["node", "dist/index.js"]
